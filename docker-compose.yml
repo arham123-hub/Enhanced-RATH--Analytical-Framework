@@ -1,0 +1,47 @@
+services:
+  # ── Frontend (React app served by nginx) ──────────────────────
+  base:
+    restart: always
+    build:
+      context: .
+      dockerfile: client.dockerfile
+    ports:
+      - 9083:80
+
+  # ── Database connector (MySQL, ClickHouse, etc.) ──────────────
+  connector-api:
+    restart: always
+    network_mode: service:base
+    build:
+      context: ./services/connector
+      dockerfile: Dockerfile
+
+  # ── ML prediction (classification & regression) ───────────────
+  prediction-api:
+    restart: always
+    network_mode: service:base
+    build:
+      context: ./services/prediction
+      dockerfile: Dockerfile
+
+  # ── Causal discovery & inference ──────────────────────────────
+  causal-api:
+    restart: always
+    build:
+      context: ./services/causal-service
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    environment:
+      - mode=dev
+
+  # ── Mock real-time data server ────────────────────────────────
+  mock-realtime:
+    restart: always
+    image: node:16-alpine
+    working_dir: /app
+    volumes:
+      - ./mock-realtime-server.js:/app/mock-realtime-server.js:ro
+    command: node mock-realtime-server.js
+    ports:
+      - 4000:4000
